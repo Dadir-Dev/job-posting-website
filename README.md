@@ -93,6 +93,7 @@ cd job-board-next-prisma
 npm install
 
 # Configure your database in .env
+npx auth secret
 npx prisma generate
 npx prisma migrate dev
 
@@ -100,6 +101,18 @@ npm run dev
 ```
 
 Your app will be available at: [http://localhost:3000](http://localhost:3000)
+
+### OAuth configuration
+
+Copy `.env.example` to `.env` and set the GitHub and Google OAuth credentials.
+Never put real credentials in `.env.example` or commit `.env`.
+Create OAuth applications with these callback URLs:
+
+* GitHub: `http://localhost:3000/api/auth/callback/github`
+* Google: `http://localhost:3000/api/auth/callback/google`
+
+For production, replace `localhost:3000` with the deployed application URL and
+set the same variables in the hosting provider's environment settings.
 
 ---
 
