@@ -9,7 +9,7 @@ const Navbar = () => {
 
 	const authenticatedLinks = [
 		{ href: "/jobs", label: "Browse Jobs" },
-		{ href: "/post-job", label: "Post a Job" },
+		{ href: "/jobs/post", label: "Post a Job" },
 		{ href: "/dashboard", label: "Dashboard" },
 	];
 
