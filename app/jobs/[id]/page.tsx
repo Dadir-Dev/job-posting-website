@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
 import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
+import { ApplyButton } from "@/components/jobs/ApplyButton";
 import {
   BriefcaseIcon,
   BuildingOfficeIcon,
@@ -13,7 +15,6 @@ import {
   CalendarDaysIcon,
   DocumentTextIcon,
   ListBulletIcon,
-  PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
 
 export const dynamic = "force-dynamic";
@@ -26,14 +27,21 @@ interface JobDetailsPageProps {
 
 export default async function JobDetailsPage(props: JobDetailsPageProps) {
   const { id } = await props.params;
+  const session = await auth();
 
   const job = await prisma.job.findUnique({
     where: { id },
     include: {
       postedBy: {
         select: {
+          id: true,
           name: true,
           email: true,
+        },
+      },
+      _count: {
+        select: {
+          applications: true,
         },
       },
     },
@@ -42,6 +50,21 @@ export default async function JobDetailsPage(props: JobDetailsPageProps) {
   if (!job) {
     notFound();
   }
+
+  // Check if current logged-in user is the owner
+  const isOwner = Boolean(session?.user?.id && session.user.id === job.postedById);
+
+  // Check if current user has already applied to this job
+  const userApplication = session?.user?.id
+    ? await prisma.application.findUnique({
+        where: {
+          jobId_userId: {
+            jobId: id,
+            userId: session.user.id,
+          },
+        },
+      })
+    : null;
 
   const timeAgo = formatDistanceToNow(new Date(job.postedAt), {
     addSuffix: true,
@@ -104,13 +127,15 @@ export default async function JobDetailsPage(props: JobDetailsPageProps) {
           </div>
 
           <div className="flex shrink-0 flex-col gap-3 sm:items-end">
-            <a
-              href={`mailto:${job.postedBy?.email || "careers@" + job.company.toLowerCase().replace(/\s+/g, "") + ".com"}?subject=Application for ${encodeURIComponent(job.title)}`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-400 px-6 py-3 text-sm font-bold text-[#081a33] transition-colors hover:bg-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-300 shadow-lg shadow-sky-400/20"
-            >
-              <PaperAirplaneIcon className="h-4 w-4 stroke-[2.5]" />
-              Apply for this role
-            </a>
+            <ApplyButton
+              jobId={job.id}
+              jobTitle={job.title}
+              companyName={job.company}
+              isAuthenticated={Boolean(session?.user)}
+              isOwner={isOwner}
+              initialHasApplied={Boolean(userApplication)}
+              initialStatus={userApplication?.status || null}
+            />
           </div>
         </div>
       </div>
@@ -221,12 +246,16 @@ export default async function JobDetailsPage(props: JobDetailsPageProps) {
             </dl>
 
             <div className="border-t border-[#23466d] pt-4">
-              <a
-                href={`mailto:${job.postedBy?.email || "careers@" + job.company.toLowerCase().replace(/\s+/g, "") + ".com"}?subject=Application for ${encodeURIComponent(job.title)}`}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-400 py-2.5 text-xs font-bold text-[#081a33] transition-colors hover:bg-sky-300"
-              >
-                Apply for this role
-              </a>
+              <ApplyButton
+                jobId={job.id}
+                jobTitle={job.title}
+                companyName={job.company}
+                isAuthenticated={Boolean(session?.user)}
+                isOwner={isOwner}
+                initialHasApplied={Boolean(userApplication)}
+                initialStatus={userApplication?.status || null}
+                fullWidth
+              />
             </div>
           </div>
         </aside>
